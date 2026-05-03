@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>לוח שנה</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #F7F6F2; --surface: #FFFFFF; --border: #E0DED8;
+    --text: #1A1A18; --text-muted: #888780; --text-faint: #B4B2A9;
+    --accent: #378ADD; --accent-light: #EBF4FF; --radius: 10px; --radius-lg: 14px;
+  }
+  body { font-family: 'Heebo', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem; }
+  .app { max-width: 820px; margin: 0 auto; }
+  .app-title { font-size: 13px; font-weight: 500; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1.5rem; }
+  .calendar-card { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: visible; }
+  .cal-top { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+  .month-title { font-size: 20px; font-weight: 500; }
+  .nav-btns { display: flex; gap: 6px; }
+  .nav-btn { width: 34px; height: 34px; border: 1px solid var(--border); border-radius: var(--radius); background: none; cursor: pointer; font-size: 17px; color: var(--text); display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
+  .nav-btn:hover { background: var(--bg); }
+  .today-btn { font-family: 'Heebo', sans-serif; font-size: 13px; padding: 6px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: none; cursor: pointer; color: var(--text-muted); transition: background 0.15s; }
+  .today-btn:hover { background: var(--bg); color: var(--text); }
+  .grid-wrap { padding: 1rem 1rem 1rem; position: relative; }
+  .days-header { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 6px; }
+  .day-label { text-align: center; font-size: 12px; font-weight: 500; color: var(--text-faint); padding: 4px 0; }
+  .dates-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .date-cell { min-height: 86px; border-radius: var(--radius); border: 1px solid transparent; padding: 5px 6px; cursor: pointer; transition: background 0.1s, border-color 0.1s; position: relative; }
+  .date-cell:hover { background: var(--bg); border-color: var(--border); }
+  .date-cell.other-month { opacity: 0.38; }
+  .date-cell.today { border-color: var(--accent) !important; }
+  .date-cell.has-events { border-color: #FFAAAA !important; background: #FFF8F8; }
+  .date-cell.has-events:hover { background: #FFEDED; }
+  .date-cell.selected { background: var(--accent-light) !important; border-color: var(--accent) !important; }
+  .date-cell.holiday { background: #FFFBEE; border-color: #F5D87A !important; }
+  .cell-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 2px; }
+  .date-num { font-size: 13px; font-weight: 500; color: var(--text); width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 50%; flex-shrink: 0; }
+  .date-cell.today .date-num { background: #378ADD; color: white; }
+  .date-cell.other-month .date-num { color: var(--text-faint); }
+  .heb-date { font-size: 9px; color: var(--text-faint); text-align: left; line-height: 1.3; margin-top: 3px; }
+  .holiday-name { font-size: 9px; color: #8A6010; background: #FFF0C0; border-radius: 4px; padding: 1px 4px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .event-chip { font-size: 10px; border-radius: 4px; padding: 2px 5px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+  .event-more { font-size: 10px; color: var(--text-faint); margin-top: 1px; padding-right: 2px; }
+
+  /* ── Popup ── */
+  .popup-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.18); backdrop-filter: blur(2px); display: none; align-items: center; justify-content: center; }
+  .popup-overlay.open { display: flex; animation: fadeIn 0.15s ease; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .popup { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); width: 360px; max-width: 95vw; box-shadow: 0 8px 40px rgba(0,0,0,0.18); animation: popIn 0.18s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .popup-header { display: flex; align-items: flex-start; justify-content: space-between; padding: 1.1rem 1.25rem 0.75rem; border-bottom: 1px solid var(--border); }
+  .popup-date { font-size: 15px; font-weight: 500; line-height: 1.4; }
+  .popup-heb { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .popup-close { background: none; border: none; cursor: pointer; font-size: 18px; color: var(--text-faint); line-height: 1; padding: 2px 4px; transition: color 0.15s; margin-top: -2px; }
+  .popup-close:hover { color: var(--text); }
+  .popup-holiday { margin: 0 1.25rem; padding: 6px 0 0; }
+  .holiday-badge { display: inline-block; font-size: 12px; background: #FFF0C0; color: #8A6010; border-radius: 6px; padding: 3px 10px; margin-top: 6px; border: 1px solid #F0D070; }
+  .popup-body { padding: 1rem 1.25rem; }
+  .add-form { display: flex; gap: 7px; margin-bottom: 1rem; align-items: center; }
+  .add-form input[type=text] { flex: 1; font-family: 'Heebo', sans-serif; font-size: 14px; padding: 8px 11px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); outline: none; transition: border-color 0.15s; }
+  .add-form input[type=text]:focus { border-color: var(--accent); background: var(--surface); }
+  .add-form input[type=text]::placeholder { color: var(--text-faint); }
+  .color-picker-wrap { display: flex; gap: 5px; align-items: center; margin-bottom: 1rem; }
+  .color-label { font-size: 12px; color: var(--text-muted); margin-left: 4px; }
+  .color-swatch { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: transform 0.1s; }
+  .color-swatch:hover { transform: scale(1.15); }
+  .color-swatch.active { border-color: #333 !important; transform: scale(1.1); }
+  .add-btn { font-family: 'Heebo', sans-serif; font-size: 13px; padding: 7px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); cursor: pointer; color: var(--text); transition: background 0.15s; white-space: nowrap; }
+  .add-btn:hover { background: var(--bg); }
+  .event-list { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; }
+  .event-item { display: flex; align-items: center; gap: 9px; padding: 8px 10px; background: var(--bg); border-radius: var(--radius); border: 1px solid var(--border); }
+  .event-color-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .event-name { font-size: 13px; color: var(--text); flex: 1; }
+  .del-btn { background: none; border: none; cursor: pointer; color: var(--text-faint); font-size: 13px; padding: 0 3px; line-height: 1; transition: color 0.15s; }
+  .del-btn:hover { color: #E24B4A; }
+  .no-events { font-size: 13px; color: var(--text-faint); padding: 4px 0; }
+
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; padding: 0.85rem 1.5rem; border-top: 1px solid var(--border); border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-muted); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="app-title">לוח שנה</div>
+  <div class="calendar-card">
+    <div class="cal-top">
+      <h1 class="month-title" id="month-title"></h1>
+      <div style="display:flex;gap:10px;align-items:center">
+        <button class="today-btn" onclick="goToday()">היום</button>
+        <div class="nav-btns">
+          <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
+          <button class="nav-btn" onclick="changeMonth(1)">›</button>
+        </div>
+      </div>
+    </div>
+    <div class="grid-wrap">
+      <div class="days-header" id="day-labels"></div>
+      <div class="dates-grid" id="cal-grid"></div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#FFCCCC;border:1px solid #FFAAAA"></div> יום עם אירועים</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#FFF0C0;border:1px solid #F5D87A"></div> חג עברי</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#EBF4FF;border:1px solid #378ADD"></div> יום נבחר</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#378ADD;border-radius:50%"></div> היום</div>
+    </div>
+  </div>
+</div>
+
+<!-- Popup -->
+<div class="popup-overlay" id="popup-overlay" onclick="closePopupOnOverlay(event)">
+  <div class="popup" id="popup">
+    <div class="popup-header">
+      <div>
+        <div class="popup-date" id="popup-date"></div>
+        <div class="popup-heb" id="popup-heb"></div>
+      </div>
+      <button class="popup-close" onclick="closePopup()">✕</button>
+    </div>
+    <div class="popup-holiday" id="popup-holiday"></div>
+    <div class="popup-body">
+      <div class="color-picker-wrap">
+        <span class="color-label">צבע:</span>
+        <div id="color-picker"></div>
+      </div>
+      <div class="add-form">
+        <input type="text" id="event-input" placeholder="שם האירוע..." />
+        <button class="add-btn" onclick="addEvent()">+ הוסף</button>
+      </div>
+      <div class="event-list" id="event-list"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Hebrew Calendar ────────────────────────────────────────────────────────────
+function isLeapHebYear(y){return[3,6,8,11,14,17,19].includes(y%19);}
+function daysInHebMonth(m,y){
+  const base=[30,29,30,29,30,29,30,29,30,29,30,29,30,29];
+  if(!isLeapHebYear(y)){if(m===6)return 29;if(m===7)return 29;}
+  const dy=yearLen(y);
+  if(dy===353||dy===383){if(m===3)return 29;}
+  if(dy===355||dy===385){if(m===2)return 30;}
+  return base[m-1];
+}
+function hebMonthsInYear(y){return isLeapHebYear(y)?13:12;}
+function yearLen(y){return hebYearStart(y+1)-hebYearStart(y);}
+function hebYearStart(y){
+  const E=(235*Math.floor((y-1)/19)+12*((y-1)%19)+Math.floor((((y-1)%19)*7+1)/19));
+  const p=204+793*(E%1080),h=5+12*E+793*Math.floor(E/1080)+Math.floor(p/1080);
+  const cj=1+29*E+Math.floor(h/24),cp=1080*(h%24)+p%1080;
+  let d=cj;
+  if(cp>=19440||(cj%7===2&&cp>=9924&&!isLeapHebYear(y))||(cj%7===1&&cp>=16789&&isLeapHebYear(y-1)))d=cj+1;
+  if([0,3,5].includes(d%7))d++;
+  return 347997+d;
+}
+function monthStart(y,m){let s=0;for(let i=1;i<m;i++)s+=daysInHebMonth(i,y);return s;}
+function jdToGreg(JD){
+  const a=JD+32044,b=Math.floor((4*a+3)/146097),c=a-Math.floor(146097*b/4);
+  const d=Math.floor((4*c+3)/1461),e=c-Math.floor(1461*d/4),m=Math.floor((5*e+2)/153);
+  return{year:100*b+d-4800+Math.floor(m/10),month:m+3-12*Math.floor(m/10),day:e-Math.floor((153*m+2)/5)+1};
+}
+function gregToJD(yr,mo,dy){
+  const a=Math.floor((14-mo)/12),y=yr+4800-a,m=mo+12*a-3;
+  return dy+Math.floor((153*m+2)/5)+365*y+Math.floor(y/4)-Math.floor(y/100)+Math.floor(y/400)-32045;
+}
+function jdToHeb(JD){
+  let y=Math.floor((JD-347997)/365.25)+1;
+  while(hebYearStart(y+1)<=JD)y++;while(hebYearStart(y)>JD)y--;
+  let m=1,months=hebMonthsInYear(y);
+  while(m<=months&&hebYearStart(y)+monthStart(y,m)+daysInHebMonth(m,y)-1<JD)m++;
+  return{year:y,month:m,day:JD-hebYearStart(y)-monthStart(y,m)+1};
+}
+const HEB_DAYS=['','א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ז׳','ח׳','ט׳','י׳','י״א','י״ב','י״ג','י״ד','ט״ו','ט״ז','י״ז','י״ח','י״ט','כ׳','כ״א','כ״ב','כ״ג','כ״ד','כ״ה','כ״ו','כ״ז','כ״ח','כ״ט','ל׳'];
+const HEB_MN=['תשרי','חשון','כסלו','טבת','שבט','אדר','ניסן','אייר','סיוון','תמוז','אב','אלול'];
+const HEB_MN_L=['תשרי','חשון','כסלו','טבת','שבט','אדר א׳','אדר ב׳','ניסן','אייר','סיוון','תמוז','אב','אלול'];
+function hebDateStr(gY,gM,gD){
+  try{
+    const h=jdToHeb(gregToJD(gY,gM,gD));
+    const names=isLeapHebYear(h.year)?HEB_MN_L:HEB_MN;
+    return`${HEB_DAYS[h.day]} ${names[h.month-1]}`;
+  }catch(e){return'';}
+}
+
+// ── Jewish Holidays ─────────────────────────────────────────────────────────────
+const _hc={};
+function getHolidays(gYear){
+  if(_hc[gYear])return _hc[gYear];
+  const map={};
+  function add(jd,name){const g=jdToGreg(jd);if(g.year!==gYear)return;const k=`${g.year}-${String(g.month).padStart(2,'0')}-${String(g.day).padStart(2,'0')}`;if(!map[k])map[k]=[];map[k].push(name);}
+  for(let hY=gYear+3760;hY<=gYear+3762;hY++){
+    const jd=(hM,hD)=>hebYearStart(hY)+monthStart(hY,hM)+hD-1;
+    const leap=isLeapHebYear(hY),AD=leap?7:6;
+    add(jd(1,1),'ראש השנה');add(jd(1,2),'ראש השנה');add(jd(1,10),'יום כיפור');
+    for(let i=15;i<=21;i++)add(jd(1,i),i===21?'הושענא רבה':'סוכות');
+    add(jd(1,22),'שמיני עצרת');add(jd(1,23),'שמחת תורה');
+    for(let i=0;i<8;i++)add(jd(3,25)+i,'חנוכה');
+    add(jd(5,15),'ט״ו בשבט');
+    add(jd(AD,13),'תענית אסתר');add(jd(AD,14),'פורים');add(jd(AD,15),'שושן פורים');
+    add(jd(7,14),'ערב פסח');
+    for(let i=15;i<=22;i++)add(jd(7,i),i===22?'אחרון של פסח':'פסח');
+    add(jd(7,27),'יום השואה');
+    add(jd(7+1,4),'יום הזיכרון');add(jd(7+1,5),'יום העצמאות');
+    add(jd(7+1,18),'ל״ג בעומר');add(jd(7+1,28),'יום ירושלים');
+    add(jd(9,6),'ערב שבועות');add(jd(9,7),'שבועות');add(jd(9,8),'שבועות');
+    add(jd(10,17),'י״ז בתמוז');add(jd(11,9),'תשעה באב');add(jd(11,15),'ט״ו באב');
+  }
+  _hc[gYear]=map;return map;
+}
+function getHolidayForDate(gY,gM,gD){
+  const map=getHolidays(gY);
+  const k=`${gY}-${String(gM).padStart(2,'0')}-${String(gD).padStart(2,'0')}`;
+  return map[k]||null;
+}
+
+// ── App State ──────────────────────────────────────────────────────────────────
+const DAYS_HE=['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
+const DAY_NAMES=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+const MONTHS_HE=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+const COLORS=[
+  {hex:'#378ADD',light:'#D6EAFC',dark:'#185FA5',label:'כחול'},
+  {hex:'#E24B4A',light:'#FDDEDE',dark:'#991F1F',label:'אדום'},
+  {hex:'#3BA868',light:'#D2F3E2',dark:'#1A6B3F',label:'ירוק'},
+  {hex:'#E07B20',light:'#FDEBD0',dark:'#8A4910',label:'כתום'},
+  {hex:'#9B59B6',light:'#EDD6F7',dark:'#6B2D86',label:'סגול'},
+  {hex:'#D4AC0D',light:'#FDF6D0',dark:'#856A07',label:'צהוב'},
+];
+let now=new Date(),viewYear=now.getFullYear(),viewMonth=now.getMonth(),selectedDate=null,selectedColor=0;
+let events={};
+try{const saved=localStorage.getItem('cal_events');if(saved)events=JSON.parse(saved);}catch(e){}
+function saveEvents(){try{localStorage.setItem('cal_events',JSON.stringify(events));}catch(e){}}
+function dateKey(y,m,d){return`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;}
+
+// ── Render Calendar ────────────────────────────────────────────────────────────
+function render(){
+  document.getElementById('month-title').textContent=`${MONTHS_HE[viewMonth]} ${viewYear}`;
+  document.getElementById('day-labels').innerHTML=DAYS_HE.map(d=>`<div class="day-label">${d}</div>`).join('');
+  const grid=document.getElementById('cal-grid');grid.innerHTML='';
+  const first=new Date(viewYear,viewMonth,1),startDay=first.getDay();
+  const dim=new Date(viewYear,viewMonth+1,0).getDate(),prevDays=new Date(viewYear,viewMonth,0).getDate();
+  for(let i=0;i<startDay;i++){const d=prevDays-startDay+1+i,m=viewMonth===0?11:viewMonth-1,y=viewMonth===0?viewYear-1:viewYear;grid.appendChild(makeCell(y,m,d,true));}
+  for(let d=1;d<=dim;d++)grid.appendChild(makeCell(viewYear,viewMonth,d,false));
+  const rem=42-startDay-dim;
+  for(let d=1;d<=rem;d++){const m=viewMonth===11?0:viewMonth+1,y=viewMonth===11?viewYear+1:viewYear;grid.appendChild(makeCell(y,m,d,true));}
+}
+
+function makeCell(y,m,d,other){
+  const key=dateKey(y,m,d);
+  const isToday=y===now.getFullYear()&&m===now.getMonth()&&d===now.getDate();
+  const isSel=selectedDate===key;
+  const evs=events[key]||[];
+  const holidays=getHolidayForDate(y,m+1,d);
+  const cell=document.createElement('div');
+  let cls='date-cell';
+  if(other)cls+=' other-month';if(isToday)cls+=' today';if(isSel)cls+=' selected';
+  if(evs.length>0)cls+=' has-events';else if(holidays)cls+=' holiday';
+  cell.className=cls;
+  const top=document.createElement('div');top.className='cell-top';
+  const num=document.createElement('div');num.className='date-num';num.textContent=d;top.appendChild(num);
+  const heb=document.createElement('div');heb.className='heb-date';
+  try{heb.textContent=hebDateStr(y,m+1,d);}catch(e){}
+  top.appendChild(heb);cell.appendChild(top);
+  if(holidays)holidays.slice(0,1).forEach(h=>{const el=document.createElement('div');el.className='holiday-name';el.textContent=h;cell.appendChild(el);});
+  evs.slice(0,2).forEach(ev=>{const chip=document.createElement('div');chip.className='event-chip';chip.style.background=COLORS[ev.color].light;chip.style.color=COLORS[ev.color].dark;chip.textContent=ev.name;cell.appendChild(chip);});
+  if(evs.length>2){const more=document.createElement('div');more.className='event-more';more.textContent=`+${evs.length-2} נוספים`;cell.appendChild(more);}
+  cell.onclick=()=>openPopup(key,y,m,d);
+  return cell;
+}
+
+// ── Popup ──────────────────────────────────────────────────────────────────────
+function openPopup(key,y,m,d){
+  selectedDate=key;
+  const dow=new Date(y,m,d).getDay();
+  document.getElementById('popup-date').textContent=`יום ${DAY_NAMES[dow]}, ${d} ב${MONTHS_HE[m]} ${y}`;
+  document.getElementById('popup-heb').textContent=hebDateStr(y,m+1,d);
+  const holidays=getHolidayForDate(y,m+1,d);
+  document.getElementById('popup-holiday').innerHTML=holidays?holidays.map(h=>`<span class="holiday-badge">✡ ${h}</span>`).join(''):'';
+  renderPopupEvents();
+  document.getElementById('popup-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('event-input').focus(),200);
+  render();
+}
+
+function closePopup(){
+  document.getElementById('popup-overlay').classList.remove('open');
+  selectedDate=null;
+  render();
+}
+
+function closePopupOnOverlay(e){
+  if(e.target===document.getElementById('popup-overlay'))closePopup();
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closePopup();});
+
+function renderColorPicker(){
+  document.getElementById('color-picker').innerHTML=COLORS.map((c,i)=>
+    `<div class="color-swatch${i===selectedColor?' active':''}" style="background:${c.hex}" title="${c.label}" onclick="selectColor(${i})"></div>`
+  ).join('');
+}
+function selectColor(i){selectedColor=i;renderColorPicker();}
+
+function renderPopupEvents(){
+  const list=document.getElementById('event-list');
+  const evs=events[selectedDate]||[];
+  if(!evs.length){list.innerHTML='<div class="no-events">אין אירועים ביום זה</div>';return;}
+  list.innerHTML=evs.map((ev,i)=>
+    `<div class="event-item">
+      <div class="event-color-dot" style="background:${COLORS[ev.color].hex}"></div>
+      <span class="event-name">${ev.name}</span>
+      <button class="del-btn" onclick="removeEvent(${i})">✕</button>
+    </div>`
+  ).join('');
+}
+
+function addEvent(){
+  const input=document.getElementById('event-input'),val=input.value.trim();
+  if(!val||!selectedDate)return;
+  if(!events[selectedDate])events[selectedDate]=[];
+  events[selectedDate].push({name:val,color:selectedColor});
+  saveEvents();input.value='';renderPopupEvents();render();
+}
+function removeEvent(idx){events[selectedDate].splice(idx,1);saveEvents();renderPopupEvents();render();}
+function changeMonth(dir){viewMonth+=dir;if(viewMonth>11){viewMonth=0;viewYear++;}if(viewMonth<0){viewMonth=11;viewYear--;}render();}
+function goToday(){viewYear=now.getFullYear();viewMonth=now.getMonth();render();}
+
+document.getElementById('event-input').addEventListener('keydown',e=>{if(e.key==='Enter')addEvent();});
+renderColorPicker();render();
+</script>
+</body>
+</html>
