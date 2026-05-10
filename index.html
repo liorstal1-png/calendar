@@ -273,7 +273,7 @@ const HEB_DAYS=['','א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ז׳','ח׳','ט׳
 const HEB_MN=['תשרי','חשון','כסלו','טבת','שבט','אדר','ניסן','אייר','סיוון','תמוז','אב','אלול'];
 const HEB_MN_L=['תשרי','חשון','כסלו','טבת','שבט','אדר א׳','אדר ב׳','ניסן','אייר','סיוון','תמוז','אב','אלול'];
 function hebDateStr(gY,gM,gD){
-  try{const h=jdToHeb(gregToJD(gY,gM,gD));const names=isLeapHebYear(h.year)?HEB_MN_L:HEB_MN;return`${HEB_DAYS[h.day]} ${names[h.month-1]}`;}catch(e){return'';}
+  try{const h=jdToHeb(gregToJD(gY,gM,gD)-1);const names=isLeapHebYear(h.year)?HEB_MN_L:HEB_MN;return`${HEB_DAYS[h.day]} ${names[h.month-1]}`;}catch(e){return'';}
 }
 
 // ── Jewish Holidays ──────────────────────────────────────────────────────────
@@ -281,7 +281,7 @@ const _hc={};
 function getHolidays(gYear){
   if(_hc[gYear])return _hc[gYear];
   const map={};
-  function add(jd,name){const g=jdToGreg(jd);if(g.year!==gYear)return;const k=`${g.year}-${String(g.month).padStart(2,'0')}-${String(g.day).padStart(2,'0')}`;if(!map[k])map[k]=[];map[k].push(name);}
+  function add(jd,name){const g=jdToGreg(jd+1);if(g.year!==gYear)return;const k=`${g.year}-${String(g.month).padStart(2,'0')}-${String(g.day).padStart(2,'0')}`;if(!map[k])map[k]=[];map[k].push(name);}
   for(let hY=gYear+3760;hY<=gYear+3762;hY++){
     const jd=(hM,hD)=>hebYearStart(hY)+monthStart(hY,hM)+hD-1;
     const AD=isLeapHebYear(hY)?7:6;
@@ -296,7 +296,7 @@ function getHolidays(gYear){
     add(jd(7,27),'יום השואה');
     add(jd(8,4),'יום הזיכרון');add(jd(8,5),'יום העצמאות');
     add(jd(8,18),'ל״ג בעומר');add(jd(8,28),'יום ירושלים');
-    add(jd(9,6),'ערב שבועות');add(jd(9,7),'שבועות');add(jd(9,8),'שבועות');
+    add(jd(9,5),'ערב שבועות');add(jd(9,6),'שבועות');add(jd(9,7),'שבועות');
     add(jd(10,17),'י״ז בתמוז');add(jd(11,9),'תשעה באב');add(jd(11,15),'ט״ו באב');
   }
   _hc[gYear]=map;return map;
