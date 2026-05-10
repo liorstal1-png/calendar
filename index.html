@@ -431,36 +431,76 @@ function makeCell(y,m,d,other){
   if(holidays)holidays.slice(0,1).forEach(h=>{const el=document.createElement('div');el.className='holiday-name';el.textContent=h;cell.appendChild(el);});
   evs.slice(0,2).forEach(ev=>{const chip=document.createElement('div');chip.className='event-chip';chip.style.background=COLORS[ev.color].light;chip.style.color=COLORS[ev.color].dark;chip.textContent=ev.name;cell.appendChild(chip);});
   if(evs.length>2){const more=document.createElement('div');more.className='event-more';more.textContent=`+${evs.length-2} נוספים`;cell.appendChild(more);}
+  // + button always visible
+  const addBtn=document.createElement('button');
+  addBtn.className='add-btn-cell';
+  addBtn.textContent='+';
+  addBtn.onclick=(e)=>{e.stopPropagation();collapseAll();openPopup(key,y,m,d);};
+  cell.appendChild(addBtn);
+
+  // Desktop: hover tooltip
   cell.addEventListener('mouseenter',(e)=>{
-    const tt=document.getElementById('cell-tooltip');
-    tt.innerHTML='';
-    const hols=getHolidayForDate(y,m+1,d);
-    const evs=events[key]||[];
-    if(hols){
-      hols.forEach(h=>{
-        const el=document.createElement('div');
-        el.textContent='✡ '+h;
-        el.style.cssText='background:#FFF0C0;color:#8A6010;padding:3px 7px;border-radius:5px;margin:2px 0;font-size:12px;';
-        tt.appendChild(el);
-      });
-    }
-    evs.forEach(ev=>{
-      const el=document.createElement('div');
-      el.textContent='● '+ev.name;
-      const c=COLORS[ev.color];
-      el.style.cssText='background:'+c.hex+';color:#fff;padding:3px 7px;border-radius:5px;margin:2px 0;font-size:12px;';
-      tt.appendChild(el);
-    });
-    if(tt.children.length>0){
-      tt.style.background='transparent';
-      tt.style.boxShadow='none';
-      tt.style.padding='0';
-      tt.style.display='block';
-      posTooltip(e);
+    if(window.matchMedia('(hover:none)').matches)return;
+    if(buildTooltip(key,y,m,d)){
+      const tt=document.getElementById('cell-tooltip');
+      tt.style.display='block';posTooltip(e);
     }
   });
-  cell.addEventListener('mousemove',(e)=>posTooltip(e));
+  cell.addEventListener('mousemove',(e)=>{
+    if(!window.matchMedia('(hover:none)').matches)posTooltip(e);
+  });
   cell.addEventListener('mouseleave',()=>{document.getElementById('cell-tooltip').style.display='none';});
+
+  // Click: expand cell to show events
+  cell.addEventListener('click',(e)=>{
+    if(e.target.closest('.add-btn-cell'))return;
+    if(e.target.closest('.exp-event-del'))return;
+    document.getElementById('cell-tooltip').style.display='none';
+    if(cell.classList.contains('expanded')){
+      cell.classList.remove('expanded');
+    } else {
+      collapseAll();
+      selectedDate=key;
+      // build expanded events
+      let expDiv=cell.querySelector('.expanded-events');
+      if(!expDiv){
+        expDiv=document.createElement('div');
+        expDiv.className='expanded-events';
+        cell.appendChild(expDiv);
+      }
+      expDiv.innerHTML='';
+      const evs=(events[key]||[]);
+      if(evs.length===0){
+        const empty=document.createElement('div');
+        empty.style.cssText='font-size:11px;color:var(--text-faint);padding:3px 0;';
+        empty.textContent='אין אירועים';
+        expDiv.appendChild(empty);
+      }
+      evs.forEach((ev,i)=>{
+        const item=document.createElement('div');
+        item.style.cssText='display:flex;align-items:center;gap:5px;padding:3px 0;';
+        const dot=document.createElement('div');
+        dot.style.cssText='width:8px;height:8px;border-radius:50%;flex-shrink:0;background:'+COLORS[ev.color].hex+';';
+        const nm=document.createElement('div');
+        nm.style.cssText='font-size:11px;color:var(--text);flex:1;';
+        nm.textContent=ev.name;
+        const del=document.createElement('button');
+        del.style.cssText='background:none;border:none;cursor:pointer;color:var(--text-faint);font-size:12px;padding:0 2px;';
+        del.textContent='✕';
+        del.onclick=(e2)=>{e2.stopPropagation();events[key].splice(i,1);saveEvents();render();};
+        item.appendChild(dot);item.appendChild(nm);item.appendChild(del);
+        expDiv.appendChild(item);
+      });
+      const hols=getHolidayForDate(y,m+1,d);
+      if(hols){hols.forEach(h=>{
+        const hEl=document.createElement('div');
+        hEl.style.cssText='font-size:10px;color:#8A6010;background:#FFF0C0;border-radius:3px;padding:2px 5px;margin-top:2px;';
+        hEl.textContent='✡ '+h;
+        expDiv.appendChild(hEl);
+      });}
+      cell.classList.add('expanded');
+    }
+  });
   return cell;
 }
 
