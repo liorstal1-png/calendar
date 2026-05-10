@@ -99,13 +99,7 @@
   .del-btn:hover { color: #E24B4A; }
   .no-events { font-size: 13px; color: var(--text-faint); padding: 4px 0; }
 
-  .cell-tooltip {
-  position: fixed;
-  pointer-events: none;
-  z-index: 500;
-  display: none;
-  direction: rtl;
-}
+  
 .legend { display: flex; gap: 12px; flex-wrap: wrap; padding: 0.75rem 1.25rem; border-top: 1px solid var(--border); border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
   .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-muted); }
   .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
@@ -114,6 +108,37 @@
   #install-banner.show { display: flex; }
   #install-btn { background: white; color: #1A1A18; border: none; border-radius: 8px; padding: 6px 14px; font-family: 'Heebo', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
   #install-dismiss { background: none; border: none; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 18px; padding: 0 2px; line-height: 1; margin-right: auto; }
+/* Expanded cell */
+.date-cell.expanded {
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  z-index: 20;
+  position: relative;
+  box-shadow: 0 6px 24px rgba(0,0,0,.15);
+  border-color: #378ADD !important;
+  background: #fff !important;
+}
+.date-cell.expanded .event-chip,
+.date-cell.expanded .event-more,
+.date-cell.expanded .holiday-name { display: none !important; }
+.cell-expanded { padding: 4px 2px 2px 2px; }
+.cell-add-btn {
+  display: block;
+  width: calc(100% - 8px);
+  margin: 6px 4px 3px;
+  padding: 6px 0;
+  background: #EBF4FF;
+  color: #378ADD;
+  border: none;
+  border-radius: 6px;
+  font-family: 'Heebo', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cell-add-btn:active { background: #C8DFF8; }
 </style>
 </head>
 <body>
@@ -142,8 +167,6 @@
     </div>
   </div>
 </div>
-
-<div class="cell-tooltip" id="cell-tooltip"></div>
 
 <!-- Popup -->
 <div class="popup-overlay" id="popup-overlay" onclick="closePopupOnOverlay(event)">
@@ -373,33 +396,9 @@ function checkPendingNotifications(){
 checkPendingNotifications();
 setInterval(checkPendingNotifications, 60000);
 
-// ── Render ───────────────────────────────────────────────────────────────────
-var _lastTapKey=null;
-function buildTooltip(key,y,m,d){
-  const tt=document.getElementById('cell-tooltip');
-  tt.innerHTML='';
-  const hols=getHolidayForDate(y,m+1,d);
-  const evs=events[key]||[];
-  if(hols){hols.forEach(h=>{const el=document.createElement('div');el.textContent='✡ '+h;el.style.cssText='background:#FFF0C0;color:#8A6010;padding:3px 7px;border-radius:5px;margin:2px 0;font-size:12px;';tt.appendChild(el);});}
-  evs.forEach(ev=>{const el=document.createElement('div');el.textContent='● '+ev.name;const c=COLORS[ev.color];el.style.cssText='background:'+c.hex+';color:#fff;padding:3px 7px;border-radius:5px;margin:2px 0;font-size:12px;';tt.appendChild(el);});
-  tt.style.background='transparent';tt.style.boxShadow='none';tt.style.padding='0';
-  return tt.children.length>0;
-}
+// ── Render ──────────────────────────────────────────────────────────────────
 function collapseAll(){
   document.querySelectorAll('.date-cell.expanded').forEach(c=>c.classList.remove('expanded'));
-}
-// Close expanded on outside click
-document.addEventListener('click',function(e){
-  if(!e.target.closest('.date-cell'))collapseAll();
-});
-function posTooltip(e){
-  const tt=document.getElementById('cell-tooltip');
-  if(!tt||tt.style.display==='none')return;
-  let x=e.clientX+14, y=e.clientY-10;
-  if(x+210>window.innerWidth) x=e.clientX-220;
-  if(y+80>window.innerHeight) y=e.clientY-80;
-  tt.style.left=x+'px';
-  tt.style.top=y+'px';
 }
 function render(){
   document.getElementById('month-title').textContent=`${MONTHS_HE[viewMonth]} ${viewYear}`;
@@ -423,84 +422,86 @@ function makeCell(y,m,d,other){
   if(other)cls+=' other-month';if(isToday)cls+=' today';
   if(evs.length>0)cls+=' has-events';else if(holidays)cls+=' holiday';
   cell.className=cls;
+
+  // Header: date number + hebrew date
   const top=document.createElement('div');top.className='cell-top';
   const num=document.createElement('div');num.className='date-num';num.textContent=d;top.appendChild(num);
   const heb=document.createElement('div');heb.className='heb-date';
   try{heb.textContent=hebDateStr(y,m+1,d);}catch(e){}
   top.appendChild(heb);cell.appendChild(top);
-  if(holidays)holidays.slice(0,1).forEach(h=>{const el=document.createElement('div');el.className='holiday-name';el.textContent=h;cell.appendChild(el);});
-  evs.slice(0,2).forEach(ev=>{const chip=document.createElement('div');chip.className='event-chip';chip.style.background=COLORS[ev.color].light;chip.style.color=COLORS[ev.color].dark;chip.textContent=ev.name;cell.appendChild(chip);});
+
+  // Holiday chip (collapsed view)
+  if(holidays){holidays.slice(0,1).forEach(h=>{
+    const el=document.createElement('div');el.className='holiday-name';el.textContent=h;cell.appendChild(el);
+  });}
+
+  // Event chips (collapsed view)
+  evs.slice(0,2).forEach(ev=>{
+    const chip=document.createElement('div');chip.className='event-chip';
+    chip.style.background=COLORS[ev.color].light;chip.style.color=COLORS[ev.color].dark;
+    chip.textContent=ev.name;cell.appendChild(chip);
+  });
   if(evs.length>2){const more=document.createElement('div');more.className='event-more';more.textContent=`+${evs.length-2} נוספים`;cell.appendChild(more);}
-  // + button always visible
-  const addBtn=document.createElement('button');
-  addBtn.className='add-btn-cell';
-  addBtn.textContent='+';
-  addBtn.onclick=(e)=>{e.stopPropagation();collapseAll();openPopup(key,y,m,d);};
-  cell.appendChild(addBtn);
 
-  // Desktop: hover tooltip
-  cell.addEventListener('mouseenter',(e)=>{
-    if(window.matchMedia('(hover:none)').matches)return;
-    if(buildTooltip(key,y,m,d)){
-      const tt=document.getElementById('cell-tooltip');
-      tt.style.display='block';posTooltip(e);
-    }
-  });
-  cell.addEventListener('mousemove',(e)=>{
-    if(!window.matchMedia('(hover:none)').matches)posTooltip(e);
-  });
-  cell.addEventListener('mouseleave',()=>{document.getElementById('cell-tooltip').style.display='none';});
-
-  // Click: expand cell to show events
+  // Click = toggle expand
   cell.addEventListener('click',(e)=>{
-    if(e.target.closest('.add-btn-cell'))return;
-    if(e.target.closest('.exp-event-del'))return;
-    document.getElementById('cell-tooltip').style.display='none';
+    if(e.target.closest('.cell-add-btn')||e.target.closest('.cell-del-btn'))return;
     if(cell.classList.contains('expanded')){
       cell.classList.remove('expanded');
+      const exp=cell.querySelector('.cell-expanded');if(exp)exp.remove();
+      const ab=cell.querySelector('.cell-add-btn');if(ab)ab.remove();
     } else {
-      collapseAll();
+      // collapse others
+      document.querySelectorAll('.date-cell.expanded').forEach(c=>{
+        c.classList.remove('expanded');
+        const exp=c.querySelector('.cell-expanded');if(exp)exp.remove();
+        const ab=c.querySelector('.cell-add-btn');if(ab)ab.remove();
+      });
+      cell.classList.add('expanded');
       selectedDate=key;
-      // build expanded events
-      let expDiv=cell.querySelector('.expanded-events');
-      if(!expDiv){
-        expDiv=document.createElement('div');
-        expDiv.className='expanded-events';
-        cell.appendChild(expDiv);
-      }
-      expDiv.innerHTML='';
-      const evs=(events[key]||[]);
-      if(evs.length===0){
-        const empty=document.createElement('div');
-        empty.style.cssText='font-size:11px;color:var(--text-faint);padding:3px 0;';
-        empty.textContent='אין אירועים';
-        expDiv.appendChild(empty);
-      }
+
+      // Build expanded content
+      const expDiv=document.createElement('div');expDiv.className='cell-expanded';
+
+      // Show holidays
+      if(holidays){holidays.forEach(h=>{
+        const hEl=document.createElement('div');
+        hEl.style.cssText='font-size:11px;color:#8A6010;background:#FFF0C0;border-radius:4px;padding:3px 7px;margin-bottom:3px;';
+        hEl.textContent='✡ '+h;expDiv.appendChild(hEl);
+      });}
+
+      // Show events
       evs.forEach((ev,i)=>{
-        const item=document.createElement('div');
-        item.style.cssText='display:flex;align-items:center;gap:5px;padding:3px 0;';
+        const row=document.createElement('div');
+        row.style.cssText='display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--border);';
         const dot=document.createElement('div');
         dot.style.cssText='width:8px;height:8px;border-radius:50%;flex-shrink:0;background:'+COLORS[ev.color].hex+';';
         const nm=document.createElement('div');
-        nm.style.cssText='font-size:11px;color:var(--text);flex:1;';
-        nm.textContent=ev.name;
-        const del=document.createElement('button');
-        del.style.cssText='background:none;border:none;cursor:pointer;color:var(--text-faint);font-size:12px;padding:0 2px;';
+        nm.style.cssText='font-size:12px;color:var(--text);flex:1;';nm.textContent=ev.name;
+        const del=document.createElement('button');del.className='cell-del-btn';
+        del.style.cssText='background:none;border:none;cursor:pointer;color:var(--text-faint);font-size:13px;padding:0 3px;flex-shrink:0;';
         del.textContent='✕';
-        del.onclick=(e2)=>{e2.stopPropagation();events[key].splice(i,1);saveEvents();render();};
-        item.appendChild(dot);item.appendChild(nm);item.appendChild(del);
-        expDiv.appendChild(item);
+        del.onclick=(e2)=>{e2.stopPropagation();events[key].splice(i,1);saveEvents();cell.click();cell.click();};
+        row.appendChild(dot);row.appendChild(nm);row.appendChild(del);expDiv.appendChild(row);
       });
-      const hols=getHolidayForDate(y,m+1,d);
-      if(hols){hols.forEach(h=>{
-        const hEl=document.createElement('div');
-        hEl.style.cssText='font-size:10px;color:#8A6010;background:#FFF0C0;border-radius:3px;padding:2px 5px;margin-top:2px;';
-        hEl.textContent='✡ '+h;
-        expDiv.appendChild(hEl);
-      });}
-      cell.classList.add('expanded');
+
+      if(evs.length===0&&!holidays){
+        const empty=document.createElement('div');
+        empty.style.cssText='font-size:11px;color:var(--text-faint);padding:3px 0;';
+        empty.textContent='אין אירועים';expDiv.appendChild(empty);
+      }
+
+      cell.appendChild(expDiv);
+
+      // + button - add event
+      const addBtn=document.createElement('button');addBtn.className='cell-add-btn';
+      addBtn.textContent='+ הוסף אירוע';
+      addBtn.title='הוסף אירוע';
+      addBtn.onclick=(e2)=>{e2.stopPropagation();openPopup(key,y,m,d);};
+      cell.appendChild(addBtn);
     }
   });
+
   return cell;
 }
 
