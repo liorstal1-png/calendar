@@ -140,6 +140,20 @@
 }
 .cell-add-btn:active { background: #C8DFF8; }
 </style>
+  <link rel="manifest" id="pwa-manifest">
+  <script>
+    const manifest = {
+      name: "לוח שנה",
+      short_name: "לוח שנה",
+      start_url: ".",
+      display: "standalone",
+      background_color: "#F5F4F0",
+      theme_color: "#378ADD",
+      icons: [{src:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23378ADD'/><text y='.9em' font-size='80' x='50%' text-anchor='middle'>📅</text></svg>",sizes:"any",type:"image/svg+xml"}]
+    };
+    const blob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
+    document.getElementById('pwa-manifest').href = URL.createObjectURL(blob);
+  </script>
 </head>
 <body>
 <div class="app">
