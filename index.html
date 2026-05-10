@@ -374,6 +374,17 @@ checkPendingNotifications();
 setInterval(checkPendingNotifications, 60000);
 
 // ── Render ───────────────────────────────────────────────────────────────────
+var _lastTapKey=null;
+function buildTooltip(key,y,m,d){
+  const tt=document.getElementById('cell-tooltip');
+  tt.innerHTML='';
+  const hols=getHolidayForDate(y,m+1,d);
+  const evs=events[key]||[];
+  if(hols){hols.forEach(h=>{const el=document.createElement('div');el.textContent='✡ '+h;el.style.cssText='background:#FFF0C0;color:#8A6010;padding:3px 7px;border-radius:5px;margin:2px 0;font-size:12px;';tt.appendChild(el);});}
+  evs.forEach(ev=>{const el=document.createElement('div');el.textContent='● '+ev.name;const c=COLORS[ev.color];el.style.cssText='background:'+c.hex+';color:#fff;padding:3px 7px;border-radius:5px;margin:2px 0;font-size:12px;';tt.appendChild(el);});
+  tt.style.background='transparent';tt.style.boxShadow='none';tt.style.padding='0';
+  return tt.children.length>0;
+}
 function posTooltip(e){
   const tt=document.getElementById('cell-tooltip');
   if(!tt||tt.style.display==='none')return;
