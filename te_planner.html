@@ -1019,10 +1019,13 @@ function startResizeR(e,tid,blk){
   snapshot();
   var t=D.tasks.find(function(x){return x.id===tid;});
   var os=t.start,sx=e.clientX;
+  var origSpan=Math.round(diffW(pd(os),pd(t.end)));
   function onMove(e){
     var d=Math.round(-(e.clientX-sx)/WW());
-    var maxD=Math.ceil(diffW(pd(os),pd(t.end)))-1;var dc=Math.min(d,maxD);var ns=fd(addW(pd(os),dc));
-    t.start=ns;var r=dateRight(t.start),bw=Math.round(diffW(pd(t.start),pd(t.end)))*WW()-2;blk.style.right=r+'px';blk.style.width=bw+'px';
+    var dc=Math.min(d,origSpan-1);var ns=fd(addW(pd(os),dc));
+    t.start=ns;var bw=Math.round(diffW(pd(t.start),pd(t.end)))*WW()-2;
+    if(bw<WW()-2)bw=WW()-2;
+    blk.style.right=dateRight(t.start)+'px';blk.style.width=bw+'px';
     requestAnimationFrame(redrawDeps);
   }
   function onUp(){document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);render();}
@@ -1033,10 +1036,13 @@ function startResizeL(e,tid,blk){
   snapshot();
   var t=D.tasks.find(function(x){return x.id===tid;});
   var oe=t.end,sx=e.clientX;
+  var origSpan=Math.round(diffW(pd(t.start),pd(oe)));
   function onMove(e){
     var d=Math.round(-(e.clientX-sx)/WW());
-    var minD=-(Math.ceil(diffW(pd(t.start),pd(oe)))-1);var dc=Math.max(d,minD);var ne=fd(addW(pd(oe),dc));
-    t.end=ne;var r=dateRight(t.start),bw=Math.round(diffW(pd(t.start),pd(t.end)))*WW()-2;blk.style.right=r+'px';blk.style.width=bw+'px';
+    var dc=Math.max(d,-(origSpan-1));var ne=fd(addW(pd(oe),dc));
+    t.end=ne;var bw=Math.round(diffW(pd(t.start),pd(t.end)))*WW()-2;
+    if(bw<WW()-2)bw=WW()-2;
+    blk.style.right=dateRight(t.start)+'px';blk.style.width=bw+'px';
     requestAnimationFrame(redrawDeps);
   }
   function onUp(){document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);render();}
