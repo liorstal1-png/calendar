@@ -441,7 +441,15 @@ function loadData(){
       var tids=D.tasks.map(function(t){return +t.id;});
       D.deps=D.deps.filter(function(d){return tids.indexOf(+d.fromTid)!==-1&&tids.indexOf(+d.toTid)!==-1;});
     }
-    if(!D.nextSid)D.nextSid=1;if(!D.nextGid)D.nextGid=10;if(!D.nextTmid)D.nextTmid=20;
+    // normalize weeks for all tasks
+    if(D.tasks){D.tasks.forEach(function(t){
+      if(!t.weeks||t.weeks<1){
+        if(t.end&&t.end!==t.start){t.weeks=Math.max(1,Math.round(diffW(pd(t.start),pd(t.end))));}
+        else{t.weeks=1;}
+      }
+      // ensure end is always start + weeks*7
+      t.end=fd(addW(pd(t.start),t.weeks));
+    });}
     return true;
   }catch(e){return false;}
 }
@@ -826,9 +834,8 @@ function renderBody(TW,WW_){
         });
       })(row.obj);
       D.tasks.filter(function(t){return t.wid===row.obj.id;}).forEach(function(t){
-        // normalize: always derive weeks and end from each other
-        if(!t.weeks||t.weeks<1){t.weeks=Math.max(1,Math.round(diffW(pd(t.start),pd(t.end||t.start)))+(!t.end||t.end===t.start?1:1));}
-        var r=dateRight(t.start),bw=t.weeks*WW_-2;
+        var weeks=t.weeks||1;
+        var r=dateRight(t.start),bw=weeks*WW_-2;
         if(bw<2)return;
         var primaryW=D.workers.find(function(w){return w.id===t.wid;});
         var col=t.color||(primaryW?primaryW.color:row.obj.color);
