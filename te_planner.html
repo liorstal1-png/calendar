@@ -790,7 +790,7 @@ function renderBody(TW,WW_){
           var wi=Math.floor((rect.right-e.clientX)/WW_);
           if(wi<0||wi>=TL_WEEKS)return;
           var startDate=fd(wkDate(wi));
-          var endDate=fd(addW(wkDate(wi),1));
+          var endDate=fd(addW(wkDate(wi),2));
           var newId=D.nextTid++;
           snapshot();
           D.tasks.push({id:newId,wid:w.id,name:'משימה חדשה',start:startDate,end:endDate,color:null});
@@ -823,7 +823,7 @@ function renderBody(TW,WW_){
         });
       })(row.obj);
       D.tasks.filter(function(t){return t.wid===row.obj.id;}).forEach(function(t){
-        var r=dateRight(t.start),bw=(Math.round(diffW(pd(t.start),pd(t.end)))+1)*WW_-2;
+        var r=dateRight(t.start),bw=dateRight(t.end)-r-2;
         if(bw<2)return;
         var primaryW=D.workers.find(function(w){return w.id===t.wid;});
         var col=t.color||(primaryW?primaryW.color:row.obj.color);
@@ -981,7 +981,7 @@ function startDrag(e,tid,worker,blk){
         var b=document.querySelector('.blk[data-tid="'+x.id+'"]');
         if(!b)return;
         b.style.right=dateRight(x.start)+'px';
-        b.style.width=((Math.round(diffW(pd(x.start),pd(x.end)))+1)*WW()-2)+'px';
+        b.style.width=(dateRight(x.end)-dateRight(x.start)-2)+'px';
       });
     }
     // vertical - cross row
@@ -1007,8 +1007,8 @@ function startDrag(e,tid,worker,blk){
     document.removeEventListener('mousemove',onMove);
     document.removeEventListener('mouseup',onUp);
     // normalize end to week-aligned from start
-    var span=Math.max(1,Math.round(diffW(pd(t.start),pd(t.end)))+1);
-    t.end=fd(addW(pd(t.start),span-1));
+    var span=Math.max(1,Math.round(diffW(pd(t.start),pd(t.end))));
+    t.end=fd(addW(pd(t.start),span));
     render();
   }
   document.addEventListener('mousemove',onMove);
@@ -1023,7 +1023,7 @@ function startResizeR(e,tid,blk){
   function onMove(e){
     var d=Math.round(-(e.clientX-sx)/WW());
     var dc=Math.min(d,origSpan-1);var ns=fd(addW(pd(os),dc));
-    t.start=ns;var bw=(Math.round(diffW(pd(t.start),pd(t.end)))+1)*WW()-2;
+    t.start=ns;var bw=dateRight(t.end)-dateRight(t.start)-2;
     if(bw<WW()-2)bw=WW()-2;
     blk.style.right=dateRight(t.start)+'px';blk.style.width=bw+'px';
     requestAnimationFrame(redrawDeps);
@@ -1040,7 +1040,7 @@ function startResizeL(e,tid,blk){
   function onMove(e){
     var d=Math.round(-(e.clientX-sx)/WW());
     var dc=Math.max(d,-(origSpan-1));var ne=fd(addW(pd(oe),dc));
-    t.end=ne;var bw=(Math.round(diffW(pd(t.start),pd(t.end)))+1)*WW()-2;
+    t.end=ne;var bw=dateRight(t.end)-dateRight(t.start)-2;
     if(bw<WW()-2)bw=WW()-2;
     blk.style.right=dateRight(t.start)+'px';blk.style.width=bw+'px';
     requestAnimationFrame(redrawDeps);
@@ -1535,11 +1535,11 @@ function openTaskModal(tid,wid,startDate){
   sel.value=t?t.wid:(wid||(D.workers[0]&&D.workers[0].id));
   var td=fd(TODAY);
   var sVal=t?t.start:(startDate||td);
-  var eVal=t?t.end:(startDate?fd(addW(pd(startDate),1)):fd(addW(TODAY,1)));
+  var eVal=t?t.end:(startDate?fd(addW(pd(startDate),2)):fd(addW(TODAY,2)));
   document.getElementById('tsm-start').value=sVal;
   document.getElementById('tsm-end').value=eVal;
   // sync weeks field
-  var wks=Math.max(1,Math.round(diffW(pd(sVal),pd(eVal)))+1);
+  var wks=Math.max(1,Math.round(diffW(pd(sVal),pd(eVal))));
   document.getElementById('tsm-weeks').value=wks;
   buildColors('tsm-colors',t?t.color:null,true);
   om('tskmodal');setTimeout(function(){document.getElementById('tsm-name').focus();},50);
@@ -1549,7 +1549,7 @@ function saveTask(){
   var wid=parseInt(document.getElementById('tsm-worker').value);
   var start=document.getElementById('tsm-start').value;
   var weeks=Math.max(1,parseInt(document.getElementById('tsm-weeks').value)||1);
-  var end=fd(addW(pd(start),weeks-1));
+  var end=fd(addW(pd(start),weeks));
   if(!name||!start)return;
   var ce=document.querySelector('#tsm-colors .copt.on');
   var color=(ce&&ce.dataset.none)?null:(ce?(ce.dataset.hex||ce.style.background):null);
@@ -1813,13 +1813,13 @@ window.saveNote=saveNote;
 function updateTaskEnd(){
   var s=document.getElementById('tsm-start').value;
   var w=parseInt(document.getElementById('tsm-weeks').value)||1;
-  if(s){document.getElementById('tsm-end').value=fd(addW(pd(s),w-1));}
+  if(s){document.getElementById('tsm-end').value=fd(addW(pd(s),w));}
 }
 function updateTaskWeeks(){
   var s=document.getElementById('tsm-start').value;
   var e=document.getElementById('tsm-end').value;
   if(s&&e){
-    var w=Math.max(1,Math.round(diffW(pd(s),pd(e)))+1);
+    var w=Math.max(1,Math.round(diffW(pd(s),pd(e))));
     document.getElementById('tsm-weeks').value=w;
   }
 }
