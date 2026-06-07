@@ -786,8 +786,11 @@ function renderBody(TW,WW_){
         re.addEventListener('mouseenter',(function(wid){return function(){_lastPasteWid=wid;};})(w.id));
         re.addEventListener('dblclick',function(e){
           var el=e.target;while(el&&el!==re){if(el.classList&&el.classList.contains('blk'))return;el=el.parentElement;}
-          var rect=re.getBoundingClientRect();
-          var wi=Math.floor((rect.right-e.clientX)/WW_);
+          var tlwrap=document.getElementById('tlwrap');
+          var wrapRect=tlwrap.getBoundingClientRect();
+          // RTL: pixel from right edge of tlinner
+          var pixFromRight=(wrapRect.right - e.clientX) + tlwrap.scrollLeft;
+          var wi=Math.floor(pixFromRight/WW_);
           if(wi<0||wi>=TL_WEEKS)return;
           var startDate=fd(wkDate(wi));
           var endDate=fd(addW(wkDate(wi),2));
